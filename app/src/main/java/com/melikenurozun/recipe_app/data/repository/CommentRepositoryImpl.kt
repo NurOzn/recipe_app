@@ -17,18 +17,6 @@ class CommentRepositoryImpl @Inject constructor(
 
     override suspend fun getComments(recipeId: String): List<Comment> {
         return try {
-            // Join with profiles to get username? (Assuming profiles table exists and RLS allows reading)
-            // Or use auth metadata if we can join auth.users (Supabase doesn't allow joining auth.users easily from client)
-            // We'll assume a 'profiles' public table exists or we stored username in comments (denormalized) or just show "User".
-            // Implementation plan said "comments table has user_id".
-            // Phase 2 DB update didn't create profiles table, but Phase 1 might have or we assume it exists.
-            // Let's assume we fetch comments first.
-            
-            // Wait, we need username.
-            // Option 1: Fetch comments, then fetch profiles.
-            // Option 2: Join if profiles public table exists.
-            // Let's check if profiles table exists. I'll stick to fetching just comments for now and maybe only show content/rating.
-            
             val comments = supabase.from("comments")
                 .select(columns = Columns.ALL) {
                     filter {
@@ -49,11 +37,19 @@ class CommentRepositoryImpl @Inject constructor(
                  }.decodeList<CommentLikeDto>()
             } else emptyList()
 
+            val authorIds = comments.map { it.userId }.distinct()
+            val profiles = if (authorIds.isNotEmpty()) {
+                supabase.from("profiles").select {
+                    filter { isIn("id", authorIds) }
+                }.decodeList<ProfileDto>()
+            } else emptyList()
+
             comments.map { comment ->
                 val commentLikes = likes.filter { it.commentId == comment.id }
                 val likeCount = commentLikes.size
                 val isLikedByMe = if (userId != null) commentLikes.any { it.userId == userId } else false
-                comment.toDomain(likeCount, isLikedByMe)
+                val username = profiles.find { it.id == comment.userId }?.username
+                comment.toDomain(likeCount, isLikedByMe, username)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -64,8 +60,6 @@ class CommentRepositoryImpl @Inject constructor(
     override suspend fun addComment(recipeId: String, content: String): Result<Unit> {
         return try {
             val userId = supabase.auth.currentUserOrNull()?.id ?: throw Exception("User not logged in")
-            
-            // Generate ID and Timestamp manually to satisfy DB constraints
             val newId = java.util.UUID.randomUUID().toString()
             val currentTimestamp = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 java.time.Instant.now().toString()
@@ -139,9 +133,7 @@ data class CommentDto(
     @SerialName("user_id") val userId: String,
     @SerialName("recipe_id") val recipeId: String,
     val content: String,
-    @SerialName("created_at") val createdAt: String? = null,
-    // Note: We are not fetching joined likes in DTO yet to avoid complex join syntax issues.
-    // We will populate likes in Repository or ViewModel.
+    @SerialName("created_at") val createdAt: String? = null
 )
 
 @Serializable
@@ -151,7 +143,7 @@ data class CommentLikeDto(
     @SerialName("comment_id") val commentId: String
 )
 
-fun CommentDto.toDomain(likeCount: Int = 0, isLikedByMe: Boolean = false): Comment {
+fun CommentDto.toDomain(likeCount: Int = 0, isLikedByMe: Boolean = false, username: String? = null): Comment {
     return Comment(
         id = id ?: "",
         user_id = userId,
@@ -159,6 +151,7 @@ fun CommentDto.toDomain(likeCount: Int = 0, isLikedByMe: Boolean = false): Comme
         content = content,
         rating = 0,
         created_at = createdAt,
+        username = username,
         like_count = likeCount,
         is_liked_by_me = isLikedByMe
     )

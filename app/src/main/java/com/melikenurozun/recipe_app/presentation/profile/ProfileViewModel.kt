@@ -26,7 +26,7 @@ class ProfileViewModel @Inject constructor(
     private val profileRepository: com.melikenurozun.recipe_app.domain.repository.ProfileRepository,
     private val userRepository: com.melikenurozun.recipe_app.domain.repository.UserRepository,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
+    @param:dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val argUserId: String? = savedStateHandle["userId"]

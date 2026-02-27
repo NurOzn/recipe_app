@@ -114,18 +114,28 @@ class MainActivity : ComponentActivity() {
                             )
                             
                             if (isRecipesExpanded) {
-                                val categories = listOf("Breakfast", "Lunch", "Dinner", "Dessert", "Snack")
-                                categories.forEach { category ->
-                                    NavigationDrawerItem(
-                                        label = { Text(category, style = MaterialTheme.typography.bodyLarge) },
-                                        selected = false,
-                                        modifier = Modifier.padding(start = 32.dp),
-                                        onClick = {
-                                            scope.launch { drawerState.close() }
-                                            navController.navigate(Screen.Home(category = category))
+                                NavigationDrawerItem(
+                                    label = { Text("Your Recipes", style = MaterialTheme.typography.bodyLarge) },
+                                    selected = false,
+                                    modifier = Modifier.padding(start = 32.dp),
+                                    onClick = {
+                                        scope.launch { drawerState.close() }
+                                        navController.navigate(Screen.Profile())
+                                    }
+                                )
+                                NavigationDrawerItem(
+                                    label = { Text("Saved Recipes", style = MaterialTheme.typography.bodyLarge) },
+                                    selected = false,
+                                    modifier = Modifier.padding(start = 32.dp),
+                                    onClick = {
+                                        scope.launch { drawerState.close() }
+                                        if (isGuestMode) {
+                                            navController.navigate(Screen.Profile())
+                                        } else {
+                                            navController.navigate(Screen.Favorites)
                                         }
-                                    )
-                                }
+                                    }
+                                )
                             }
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -138,19 +148,6 @@ class MainActivity : ComponentActivity() {
                                     scope.launch { drawerState.close() }
                                     // Always navigate to Profile. ProfileScreen handles Guest view.
                                     navController.navigate(Screen.Profile())
-                                }
-                            )
-                             NavigationDrawerItem(
-                                label = { Text("Favorites", style = MaterialTheme.typography.titleMedium) },
-                                selected = false,
-                                icon = { Icon(Icons.Default.FavoriteBorder, null) },
-                                onClick = {
-                                    scope.launch { drawerState.close() }
-                                    if (isGuestMode) {
-                                        navController.navigate(Screen.Profile()) // Redirect to Profile to prompt login
-                                    } else {
-                                        navController.navigate(Screen.Favorites)
-                                    }
                                 }
                             )
 

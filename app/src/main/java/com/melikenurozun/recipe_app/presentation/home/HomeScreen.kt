@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.melikenurozun.recipe_app.presentation.components.RecipeCard
 import com.melikenurozun.recipe_app.presentation.home.HomeViewModel
 import androidx.compose.material3.*
@@ -165,13 +165,13 @@ fun HomeScreen(
                             }
                             Text(
                                 text = greeting,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize * 1.5f),
                                 color = MaterialTheme.colorScheme.secondary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "What are we\ncooking today?",
-                                style = MaterialTheme.typography.headlineLarge,
+                                style = MaterialTheme.typography.headlineLarge.copy(fontSize = MaterialTheme.typography.headlineLarge.fontSize * 1.5f, lineHeight = MaterialTheme.typography.headlineLarge.lineHeight * 1.5f),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                         }
@@ -189,6 +189,15 @@ fun HomeScreen(
                                     showGuestDialog = true
                                 } else {
                                     viewModel.toggleFavorite(recipe.id)
+                                }
+                            },
+                            currentUserId = uiState.currentUserId,
+                            followedUserIds = uiState.followedUserIds,
+                            onToggleFollow = { userId ->
+                                if (uiState.isGuest) {
+                                    showGuestDialog = true
+                                } else {
+                                    viewModel.toggleFollow(userId)
                                 }
                             }
                         )

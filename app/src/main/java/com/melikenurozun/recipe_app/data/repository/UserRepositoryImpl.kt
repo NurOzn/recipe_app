@@ -156,7 +156,7 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun getFollowedUserIds(): Result<List<String>> {
         return try {
             val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return Result.success(emptyList())
-            val follows = supabase.from("follows").select(columns = Columns.list("following_id")) {
+            val follows = supabase.from("follows").select {
                 filter {
                     eq("follower_id", currentUserId)
                 }

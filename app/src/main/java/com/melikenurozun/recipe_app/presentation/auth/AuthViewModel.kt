@@ -91,14 +91,18 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
+                
+                // Clean up email input to avoid validation errors
+                val cleanEmail = state.email.trim()
+                
                 if (state.isLogin) {
                     authRepository.signIn(
-                        email = state.email,
+                        email = cleanEmail,
                         password = state.password
                     ).getOrThrow()
                 } else {
                     authRepository.signUp(
-                        email = state.email,
+                        email = cleanEmail,
                         password = state.password,
                         username = state.username
                     ).getOrThrow()

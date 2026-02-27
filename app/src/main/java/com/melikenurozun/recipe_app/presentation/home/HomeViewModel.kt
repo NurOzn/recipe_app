@@ -21,8 +21,6 @@ class HomeViewModel @Inject constructor(
     private val recipeRepository: com.melikenurozun.recipe_app.domain.repository.RecipeRepository
 ) : ViewModel() {
 
-    // ... existing ...
-
     fun toggleFavorite(recipeId: String) {
         val currentRecipes = _uiState.value.recipes
         val index = currentRecipes.indexOfFirst { it.id == recipeId }
@@ -79,16 +77,48 @@ class HomeViewModel @Inject constructor(
                 allRecipesCache = recipes
                 
                 // Fetch followed users if logged in
-                if (authRepository.getCurrentUserId() != null) {
+                val currentUserId = authRepository.getCurrentUserId()
+                var userFollows = emptySet<String>()
+                if (currentUserId != null) {
                     userRepository.getFollowedUserIds().onSuccess { ids ->
                         followedUserIds = ids
+                        userFollows = ids.toSet()
                     }
                 }
                 
                 applyFilters()
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false,
+                        currentUserId = currentUserId,
+                        followedUserIds = userFollows
+                    ) 
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: "Failed to load recipes", isLoading = false) }
+            }
+        }
+    }
+
+    fun toggleFollow(userId: String) {
+        viewModelScope.launch {
+            userRepository.toggleFollow(userId).onSuccess { following ->
+                val currentFollowed = _uiState.value.followedUserIds.toMutableSet()
+                if (following) {
+                    currentFollowed.add(userId)
+                } else {
+                    currentFollowed.remove(userId)
+                }
+                
+                // Update local variable for filtering
+                followedUserIds = currentFollowed.toList()
+                
+                _uiState.update { it.copy(followedUserIds = currentFollowed) }
+                
+                // If we are currently on the FOLLOWING filter, re-apply filters so the unfollowed user's recipes are removed from the feed
+                if (_uiState.value.selectedFilter == FeedFilter.FOLLOWING && !following) {
+                    applyFilters()
+                }
             }
         }
     }
@@ -138,6 +168,8 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isGuest: Boolean = false,
+    val currentUserId: String? = null,
+    val followedUserIds: Set<String> = emptySet(),
     val selectedCategory: String? = null,
     val selectedFilter: FeedFilter = FeedFilter.ALL,
     val categories: List<String> = listOf("Breakfast", "Lunch", "Dinner", "Dessert", "Snack")

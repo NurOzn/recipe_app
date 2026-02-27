@@ -28,7 +28,7 @@ class AddEditViewModel @Inject constructor(
     private val getRecipeByIdUseCase: GetRecipeByIdUseCase,
     private val uploadImageUseCase: UploadImageUseCase,
     private val authRepository: AuthRepository,
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 

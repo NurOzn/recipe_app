@@ -33,6 +33,9 @@ fun RecipeCard(
     recipe: Recipe,
     onClick: () -> Unit,
     onToggleFavorite: (() -> Unit)? = null,
+    currentUserId: String? = null,
+    followedUserIds: Set<String> = emptySet(),
+    onToggleFollow: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -85,7 +88,7 @@ fun RecipeCard(
                                 "snack" -> "🥨"
                                 else -> "🥘"
                             },
-                            fontSize = 64.sp
+                            fontSize = 64.sp * 1.5f
                         )
                     }
                 }
@@ -115,7 +118,7 @@ fun RecipeCard(
                             text = recipe.category.uppercase(),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 10.sp,
+                                fontSize = 10.sp * 1.5f,
                                 letterSpacing = 1.sp,
                                 fontWeight = FontWeight.Bold
                             ),
@@ -169,7 +172,7 @@ fun RecipeCard(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "${recipe.timeMinutes} min",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.5f),
                                 color = Color.White
                             )
                         }
@@ -188,11 +191,11 @@ fun RecipeCard(
                 // Title
                 Text(
                     text = recipe.title,
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp * 1.5f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 26.sp
+                    lineHeight = 26.sp * 1.5f
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -212,14 +215,14 @@ fun RecipeCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (recipe.average_rating > 0) String.format("%.1f", recipe.average_rating) else "New",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.labelMedium.fontSize * 1.5f),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     
                     if (recipe.rating_count > 0) {
                          Text(
                             text = " (${recipe.rating_count})",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize * 1.5f),
                             color = WarmGray
                         )
                     }
@@ -236,13 +239,40 @@ fun RecipeCard(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     // Author
+                    val isOwnRecipe = currentUserId != null && currentUserId == recipe.user_id
+                    val isFollowing = followedUserIds.contains(recipe.user_id)
+                    
                     Text(
                         text = recipe.username ?: "Unknown",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize * 1.5f),
                         color = WarmGray,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
+                    
+                    if (!isOwnRecipe && currentUserId != null && recipe.user_id.isNotEmpty() && onToggleFollow != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { onToggleFollow(recipe.user_id) },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier.height(26.dp),
+                            shape = RoundedCornerShape(13.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                                contentColor = if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
+                        ) {
+                            Text(
+                                text = if (isFollowing) "Following" else "Follow",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.2f, // slightly smaller scalar for card fit
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }

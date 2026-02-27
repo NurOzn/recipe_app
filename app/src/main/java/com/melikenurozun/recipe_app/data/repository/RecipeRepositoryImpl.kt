@@ -76,13 +76,25 @@ class RecipeRepositoryImpl @Inject constructor(
 
     override suspend fun getRecipeById(id: String): Recipe? {
         return try {
-            val recipe = supabase.from("recipes")
+            val recipeDto = supabase.from("recipes")
                 .select(columns = Columns.ALL) {
                     filter {
                         eq("id", id)
                     }
                 }.decodeSingleOrNull<RecipeDto>()
-            recipe?.toDomain()
+                
+            if (recipeDto != null) {
+                // Fetch username
+                val profile = supabase.from("profiles")
+                    .select(columns = Columns.list("id", "username")) {
+                        filter { eq("id", recipeDto.userId) }
+                    }
+                    .decodeSingleOrNull<ProfileSubsetDto>()
+                
+                recipeDto.toDomain().copy(username = profile?.username)
+            } else {
+                null
+            }
         } catch (e: Exception) {
             null
         }

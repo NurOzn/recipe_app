@@ -4,16 +4,24 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.melikenurozun.recipe_app.domain.model.Recipe
+import com.melikenurozun.recipe_app.domain.repository.AuthRepository
+import com.melikenurozun.recipe_app.domain.repository.CommentRepository
+import com.melikenurozun.recipe_app.domain.repository.ShoppingRepository
+import com.melikenurozun.recipe_app.domain.repository.UserRepository
 import com.melikenurozun.recipe_app.domain.usecase.DeleteRecipeUseCase
 import com.melikenurozun.recipe_app.domain.usecase.GetRecipeByIdUseCase
+import com.melikenurozun.recipe_app.domain.usecase.GetUserRatingUseCase
 import com.melikenurozun.recipe_app.domain.usecase.IsFavoriteUseCase
+import com.melikenurozun.recipe_app.domain.usecase.RateRecipeUseCase
 import com.melikenurozun.recipe_app.domain.usecase.ToggleFavoriteUseCase
-import com.melikenurozun.recipe_app.domain.repository.AuthRepository
+import com.melikenurozun.recipe_app.data.repository.SettingsRepository
+import com.melikenurozun.recipe_app.presentation.util.UiMessageHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,12 +32,13 @@ class DetailViewModel @Inject constructor(
     private val deleteRecipeUseCase: DeleteRecipeUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val isFavoriteUseCase: IsFavoriteUseCase,
-    private val rateRecipeUseCase: com.melikenurozun.recipe_app.domain.usecase.RateRecipeUseCase,
-    private val getUserRatingUseCase: com.melikenurozun.recipe_app.domain.usecase.GetUserRatingUseCase,
+    private val rateRecipeUseCase: RateRecipeUseCase,
+    private val getUserRatingUseCase: GetUserRatingUseCase,
     private val authRepository: AuthRepository,
-    private val commentRepository: com.melikenurozun.recipe_app.domain.repository.CommentRepository,
-    private val shoppingRepository: com.melikenurozun.recipe_app.domain.repository.ShoppingRepository,
-    private val settingsRepository: com.melikenurozun.recipe_app.data.repository.SettingsRepository,
+    private val userRepository: UserRepository,
+    private val commentRepository: CommentRepository,
+    private val shoppingRepository: ShoppingRepository,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -60,11 +69,18 @@ class DetailViewModel @Inject constructor(
             if (recipe != null) {
                 val isFavorite = isFavoriteUseCase(recipeId)
                 val isOwnRecipe = recipe.user_id == authRepository.getCurrentUserId()
+                var isFollowing = false
+                if (!isOwnRecipe && authRepository.getCurrentUserId() != null) {
+                    userRepository.isFollowing(recipe.user_id).onSuccess { following ->
+                        isFollowing = following
+                    }
+                }
                 _uiState.update { 
                     it.copy(
                         recipe = recipe, 
                         isFavorite = isFavorite,
                         isOwnRecipe = isOwnRecipe,
+                        isFollowing = isFollowing,
                         isLoading = false 
                     ) 
                 }
@@ -90,6 +106,14 @@ class DetailViewModel @Inject constructor(
 
     fun onEvent(event: DetailEvent) {
         when (event) {
+            DetailEvent.ToggleFollow -> {
+                val recipe = uiState.value.recipe ?: return
+                viewModelScope.launch {
+                    userRepository.toggleFollow(recipe.user_id).onSuccess { following ->
+                        _uiState.update { it.copy(isFollowing = following) }
+                    }
+                }
+            }
             DetailEvent.ToggleFavorite -> {
                 val recipe = uiState.value.recipe ?: return
                 viewModelScope.launch {
@@ -104,7 +128,7 @@ class DetailViewModel @Inject constructor(
                         deleteRecipeUseCase(recipe.id)
                         _uiState.update { it.copy(isDeleted = true) }
                     } catch (e: Exception) {
-                         val errorMessage = com.melikenurozun.recipe_app.presentation.util.UiMessageHelper.getMessage(e)
+                         val errorMessage = UiMessageHelper.getMessage(e)
                         _uiState.update { it.copy(error = errorMessage) }
                     }
                 }
@@ -118,7 +142,7 @@ class DetailViewModel @Inject constructor(
                         _uiState.update { it.copy(isCommentLoading = false) }
                         _uiEvent.emit(UiEvent.ShowToast("Thank you for your review!"))
                     }.onFailure {
-                         val errorMessage = com.melikenurozun.recipe_app.presentation.util.UiMessageHelper.getMessage(it)
+                         val errorMessage = UiMessageHelper.getMessage(it)
                          _uiState.update { it.copy(isCommentLoading = false) } 
                          _uiEvent.emit(UiEvent.ShowToast("Error adding comment: $errorMessage"))
                     }
@@ -132,7 +156,7 @@ class DetailViewModel @Inject constructor(
                         _uiEvent.emit(UiEvent.ShowToast("Thank you for your rating!"))
                         loadRecipe() 
                     }.onFailure {
-                        val errorMessage = com.melikenurozun.recipe_app.presentation.util.UiMessageHelper.getMessage(it)
+                        val errorMessage = UiMessageHelper.getMessage(it)
                         _uiEvent.emit(UiEvent.ShowToast("Error rating recipe: $errorMessage"))
                     }
                 }
@@ -143,7 +167,7 @@ class DetailViewModel @Inject constructor(
                     result.onSuccess {
                         loadComments() // Reload to get updated counts/status
                     }.onFailure {
-                         val errorMessage = com.melikenurozun.recipe_app.presentation.util.UiMessageHelper.getMessage(it)
+                         val errorMessage = UiMessageHelper.getMessage(it)
                          _uiEvent.emit(UiEvent.ShowToast("Error: $errorMessage"))
                     }
                 }
@@ -168,6 +192,7 @@ data class DetailUiState(
     val error: String? = null,
     val isFavorite: Boolean = false,
     val isOwnRecipe: Boolean = false,
+    val isFollowing: Boolean = false,
     val isDeleted: Boolean = false,
     val comments: List<com.melikenurozun.recipe_app.domain.model.Comment> = emptyList(),
     val isCommentLoading: Boolean = false,
@@ -176,6 +201,7 @@ data class DetailUiState(
 )
 
 sealed class DetailEvent {
+    object ToggleFollow : DetailEvent()
     object ToggleFavorite : DetailEvent()
     object DeleteRecipe : DetailEvent()
     data class AddComment(val content: String) : DetailEvent()

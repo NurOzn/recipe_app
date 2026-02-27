@@ -38,7 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.melikenurozun.recipe_app.ui.theme.ChampagneGold
 import com.melikenurozun.recipe_app.ui.theme.WarmGray
@@ -224,7 +224,7 @@ fun DetailScreen(
                     // Title
                     Text(
                         text = recipe.title,
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = MaterialTheme.typography.headlineLarge.fontSize * 1.5f, lineHeight = MaterialTheme.typography.headlineLarge.lineHeight * 1.5f),
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
@@ -237,14 +237,14 @@ fun DetailScreen(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (recipe.average_rating > 0) String.format("%.1f", recipe.average_rating) else "New",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * 1.5f),
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         if (recipe.rating_count > 0) {
                             Text(
                                 text = " (${recipe.rating_count})",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
                                 color = WarmGray
                             )
                         }
@@ -255,15 +255,43 @@ fun DetailScreen(
                         
                         // Author
                         if (recipe.username != null) {
-                            Text(
-                                text = "By ${recipe.username}",
-                                style = MaterialTheme.typography.labelLarge, // Sans
-                                color = WarmGray,
-                                modifier = Modifier.clickable { 
-                                    if (uiState.isGuest) showGuestDialog = true 
-                                    else onNavigateToProfile(recipe.user_id) 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "By ${recipe.username}",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = MaterialTheme.typography.labelLarge.fontSize * 1.5f), // Sans
+                                    color = WarmGray,
+                                    modifier = Modifier.clickable { 
+                                        if (uiState.isGuest) showGuestDialog = true 
+                                        else onNavigateToProfile(recipe.user_id) 
+                                    }
+                                )
+                                
+                                if (!uiState.isOwnRecipe) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Button(
+                                        onClick = { 
+                                            if (uiState.isGuest) showGuestDialog = true 
+                                            else viewModel.onEvent(DetailEvent.ToggleFollow) 
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(32.dp),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (uiState.isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                                            contentColor = if (uiState.isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else androidx.compose.ui.graphics.Color.White
+                                        ),
+                                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
+                                    ) {
+                                        Text(
+                                            text = if (uiState.isFollowing) "Following" else "Follow",
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontSize = MaterialTheme.typography.labelMedium.fontSize * 1.5f,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
                                 }
-                            )
+                            }
                         }
                     }
 
@@ -273,7 +301,7 @@ fun DetailScreen(
                     if (recipe.timeMinutes > 0) {
                         Text(
                              text = "${recipe.timeMinutes} mins cooking time",
-                             style = MaterialTheme.typography.bodyMedium,
+                             style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
                              color = WarmGray
                         )
                     }
@@ -310,7 +338,7 @@ fun DetailScreen(
                     // Ingredients
                     Text(
                         text = "Ingredients",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = MaterialTheme.typography.headlineMedium.fontSize * 1.5f),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -323,11 +351,11 @@ fun DetailScreen(
                                      .padding(vertical = 6.dp),
                                  verticalAlignment = Alignment.Top
                              ) {
-                                 Text(text = "•", style = MaterialTheme.typography.headlineSmall, color = ChampagneGold)
+                                 Text(text = "•", style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.headlineSmall.fontSize * 1.5f), color = ChampagneGold)
                                  Spacer(modifier = Modifier.width(12.dp))
                                  Text(
                                      text = ingredient.trim(), 
-                                     style = MaterialTheme.typography.bodyLarge,
+                                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize * 1.5f),
                                      modifier = Modifier.weight(1f),
                                      color = MaterialTheme.colorScheme.onBackground
                                  )
@@ -360,7 +388,7 @@ fun DetailScreen(
                     ) {
                         Icon(Icons.Default.PlayArrow, null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Start Cooking Mode", style = MaterialTheme.typography.titleMedium)
+                        Text("Start Cooking Mode", style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * 1.5f))
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -368,14 +396,14 @@ fun DetailScreen(
                     // Instructions
                     Text(
                         text = "Instructions",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = MaterialTheme.typography.headlineMedium.fontSize * 1.5f),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     Text(
                         text = recipe.instructions,
-                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 28.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 28.sp * 1.5f, fontSize = MaterialTheme.typography.bodyLarge.fontSize * 1.5f),
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
@@ -386,7 +414,7 @@ fun DetailScreen(
                     // Rating Section
                     Text(
                         text = "Rate this recipe",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * 1.5f)
                     )
                     Row(modifier = Modifier.padding(vertical = 8.dp)) {
                          repeat(5) { index ->
@@ -411,7 +439,7 @@ fun DetailScreen(
                     // Comments Section (Collapsible/Preview style suggested, but keeping list for now with better header)
                      Text(
                         text = "Reviews",
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = MaterialTheme.typography.headlineMedium.fontSize * 1.5f)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -466,15 +494,24 @@ fun DetailScreen(
                                         verticalAlignment = Alignment.Top
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = comment.created_at?.take(10) ?: "",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = comment.username ?: "Unknown User",
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize * 1.5f),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = comment.created_at?.take(10) ?: "",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.5f),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
                                                 text = comment.content, 
-                                                style = MaterialTheme.typography.bodyMedium,
+                                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
